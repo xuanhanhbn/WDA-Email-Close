@@ -172,7 +172,7 @@ function CreateTicket() {
 
   useEffect(() => {
     setTimeout(() => {
-      // handleGetDataTicket()
+      handleGetDataTicket()
     }, 1000)
   }, [])
 
