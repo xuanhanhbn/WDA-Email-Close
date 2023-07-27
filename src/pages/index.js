@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import Select from 'react-select'
@@ -21,40 +21,33 @@ import { useRouter } from 'next/router'
 import Loading from 'src/components/Loading'
 import { AccountCircle, EmailOutline, MapMarkerOutline, PhoneInTalk } from 'mdi-material-ui'
 import { useSnackbar } from 'notistack'
+import CustomTable from 'src/components/TableCommon'
 
 const validationSchema = Yup.object().shape({
   ticketCategory: Yup.string().required('Category is required'),
   content: Yup.string().required('Message is required')
 })
 
-const inputCustomer = [
+const columns = [
+  {
+    field: 'content',
+    lable: 'Content Ticket'
+  },
+  {
+    field: 'createdAt',
+    lable: 'Created At'
+  },
+  {
+    field: 'ticketCategory',
+    lable: 'Ticket Category'
+  },
   {
     field: 'name',
-    label: 'Name',
-    inputLabel: 'Customer Name: ',
-    value: 'Tống Minh Dương',
-    icon: <AccountCircle />
+    lable: 'Handle Staff'
   },
   {
-    field: 'email',
-    label: 'Email',
-    inputLabel: 'Customer Email: ',
-    value: 'email@gmail.com',
-    icon: <EmailOutline />
-  },
-  {
-    field: 'telephone',
-    label: 'Phone',
-    inputLabel: 'Customer Phone: ',
-    value: '0000000',
-    icon: <PhoneInTalk />
-  },
-  {
-    field: 'address',
-    label: 'Adress',
-    inputLabel: 'Customer Adress: ',
-    value: 'Thanh Hóa',
-    icon: <MapMarkerOutline />
+    field: 'status',
+    lable: 'Status'
   }
 ]
 
@@ -135,6 +128,7 @@ function CreateTicket() {
   const [dataCustomer, setDataCustomer] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
+  const [dataTicket, setDataTicket] = useState([])
 
   const handleShowSnackbar = (message, variant = 'success') => enqueueSnackbar(message, { variant })
 
@@ -142,7 +136,8 @@ function CreateTicket() {
   const valiToken = useRef()
 
   const onSubmit = data => {
-    handleCreateTicket(data)
+    console.log('click: ')
+    handleCloseTicket(data)
   }
 
   useEffect(() => {
@@ -153,7 +148,7 @@ function CreateTicket() {
 
   useEffect(() => {
     if (router && Object.keys(router?.query).length) {
-      test.current = router?.query?.customerId
+      test.current = router?.query?.ticketId
       valiToken.current = router?.query?.validationToken
     }
   }, [router.query])
@@ -180,18 +175,23 @@ function CreateTicket() {
     }
   }
 
-  const handleCreateTicket = async data => {
+  const handleCloseTicket = async () => {
     try {
       setIsLoading(true)
 
       const newDataRequest = {
-        ...data,
-        customerId: test.current,
+        ticketId: test.current,
         validationToken: valiToken.current
       }
-      const res = await axios.post(`https://wdabckd.azurewebsites.net/api/CustomerTicket/Create`, newDataRequest)
+
+      const res = await axios.put(
+        `https://wdabckd.azurewebsites.net/api/CustomerTicket/Close
+      `,
+        newDataRequest
+      )
       if (res && res.status === 200) {
         setIsLoading(false)
+        setDataTicket(res.data)
 
         return handleShowSnackbar('Create Ticket Success')
       }
@@ -237,169 +237,160 @@ function CreateTicket() {
     setValueCategory(selectedValue)
   }
 
+  const parseData = useCallback((item, field, index) => {
+    // if (Array.isArray(dataTicket) && dataTicket.length > 0) {
+    if (field === 'index') {
+      return index + 1
+    }
+
+    if (field === 'status') {
+      if (item.status === 'Opened') {
+        return (
+          <div style={{ backgroundColor: 'rgb(244 196 196)', borderRadius: 5, paddingTop: 5, paddingBottom: 5 }}>
+            <Typography sx={{ color: 'red', textAlign: 'center' }}>Open</Typography>
+          </div>
+        )
+      }
+      if (item.status === 'Pending') {
+        return (
+          <div style={{ backgroundColor: 'rgb(244 243 196)', borderRadius: 5, paddingTop: 5, paddingBottom: 5 }}>
+            <Typography sx={{ color: 'warning.main', textAlign: 'center' }}>Pending</Typography>
+          </div>
+        )
+      }
+      if (item.status === 'Processing') {
+        return (
+          <div style={{ backgroundColor: 'rgb(205 246 215)', borderRadius: 5, paddingTop: 5, paddingBottom: 5 }}>
+            <Typography sx={{ color: 'success.main', textAlign: 'center' }}>Processing</Typography>
+          </div>
+        )
+      }
+      if (item.status === 'Done') {
+        return (
+          <div style={{ backgroundColor: 'rgb(205 246 215)', borderRadius: 5, paddingTop: 5, paddingBottom: 5 }}>
+            <Typography sx={{ color: 'success.main', textAlign: 'center' }}>Done</Typography>
+          </div>
+        )
+      }
+      if (item.status === 'Closed') {
+        return (
+          <div style={{ backgroundColor: 'rgb(205 246 215)', borderRadius: 5, paddingTop: 5, paddingBottom: 5 }}>
+            <Typography sx={{ color: 'success.main', textAlign: 'center' }}>Closed</Typography>
+          </div>
+        )
+      }
+    }
+
+    return item[field]
+  }, [])
+
   return (
     <div
       style={{
         backgroundColor: '#fff',
         borderRadius: '6px',
         boxShadow: '0px 2px 10px 0px rgba(58, 53, 65, 0.1)',
-        padding: '20px 20px 15px',
-        display: 'flex'
+        flex: 1,
+        padding: '20px',
+        margin: '20px'
       }}
     >
-      <FormControl style={{ minWidth: '450px', marginRight: 30 }}>
-        <CardContent>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 18 }}>
-            <svg
-              width={35}
-              height={29}
-              version='1.1'
-              viewBox='0 0 30 23'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-            >
-              <g stroke='none' strokeWidth='1' fill='none' fillRule='evenodd'>
-                <g id='Artboard' transform='translate(-95.000000, -51.000000)'>
-                  <g id='logo' transform='translate(95.000000, 50.000000)'>
-                    <path
-                      id='Combined-Shape'
-                      fill='#9155FD'
-                      d='M30,21.3918362 C30,21.7535219 29.9019196,22.1084381 29.7162004,22.4188007 C29.1490236,23.366632 27.9208668,23.6752135 26.9730355,23.1080366 L26.9730355,23.1080366 L23.714971,21.1584295 C23.1114106,20.7972624 22.7419355,20.1455972 22.7419355,19.4422291 L22.7419355,19.4422291 L22.741,12.7425689 L15,17.1774194 L7.258,12.7425689 L7.25806452,19.4422291 C7.25806452,20.1455972 6.88858935,20.7972624 6.28502902,21.1584295 L3.0269645,23.1080366 C2.07913318,23.6752135 0.850976404,23.366632 0.283799571,22.4188007 C0.0980803893,22.1084381 2.0190442e-15,21.7535219 0,21.3918362 L0,3.58469444 L0.00548573643,3.43543209 L0.00548573643,3.43543209 L0,3.5715689 C3.0881846e-16,2.4669994 0.8954305,1.5715689 2,1.5715689 C2.36889529,1.5715689 2.73060353,1.67359571 3.04512412,1.86636639 L15,9.19354839 L26.9548759,1.86636639 C27.2693965,1.67359571 27.6311047,1.5715689 28,1.5715689 C29.1045695,1.5715689 30,2.4669994 30,3.5715689 L30,3.5715689 Z'
-                    />
-                    <polygon
-                      id='Rectangle'
-                      opacity='0.077704'
-                      fill='#000'
-                      points='0 8.58870968 7.25806452 12.7505183 7.25806452 16.8305646'
-                    />
-                    <polygon
-                      id='Rectangle'
-                      opacity='0.077704'
-                      fill='#000'
-                      points='0 8.58870968 7.25806452 12.6445567 7.25806452 15.1370162'
-                    />
-                    <polygon
-                      id='Rectangle'
-                      opacity='0.077704'
-                      fill='#000'
-                      points='22.7419355 8.58870968 30 12.7417372 30 16.9537453'
-                      transform='translate(26.370968, 12.771227) scale(-1, 1) translate(-26.370968, -12.771227) '
-                    />
-                    <polygon
-                      id='Rectangle'
-                      opacity='0.077704'
-                      fill='#000'
-                      points='22.7419355 8.58870968 30 12.6409734 30 15.2601969'
-                      transform='translate(26.370968, 11.924453) scale(-1, 1) translate(-26.370968, -11.924453) '
-                    />
-                    <path
-                      id='Rectangle'
-                      fillOpacity='0.15'
-                      fill='#FFF'
-                      d='M3.04512412,1.86636639 L15,9.19354839 L15,9.19354839 L15,17.1774194 L0,8.58649679 L0,3.5715689 C3.0881846e-16,2.4669994 0.8954305,1.5715689 2,1.5715689 C2.36889529,1.5715689 2.73060353,1.67359571 3.04512412,1.86636639 Z'
-                    />
-                    <path
-                      id='Rectangle'
-                      fillOpacity='0.35'
-                      fill='#FFF'
-                      transform='translate(22.500000, 8.588710) scale(-1, 1) translate(-22.500000, -8.588710) '
-                      d='M18.0451241,1.86636639 L30,9.19354839 L30,9.19354839 L30,17.1774194 L15,8.58649679 L15,3.5715689 C15,2.4669994 15.8954305,1.5715689 17,1.5715689 C17.3688953,1.5715689 17.7306035,1.67359571 18.0451241,1.86636639 Z'
-                    />
-                  </g>
-                </g>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 18 }}>
+        <svg
+          width={35}
+          height={29}
+          version='1.1'
+          viewBox='0 0 30 23'
+          xmlns='http://www.w3.org/2000/svg'
+          xmlnsXlink='http://www.w3.org/1999/xlink'
+        >
+          <g stroke='none' strokeWidth='1' fill='none' fillRule='evenodd'>
+            <g id='Artboard' transform='translate(-95.000000, -51.000000)'>
+              <g id='logo' transform='translate(95.000000, 50.000000)'>
+                <path
+                  id='Combined-Shape'
+                  fill='#9155FD'
+                  d='M30,21.3918362 C30,21.7535219 29.9019196,22.1084381 29.7162004,22.4188007 C29.1490236,23.366632 27.9208668,23.6752135 26.9730355,23.1080366 L26.9730355,23.1080366 L23.714971,21.1584295 C23.1114106,20.7972624 22.7419355,20.1455972 22.7419355,19.4422291 L22.7419355,19.4422291 L22.741,12.7425689 L15,17.1774194 L7.258,12.7425689 L7.25806452,19.4422291 C7.25806452,20.1455972 6.88858935,20.7972624 6.28502902,21.1584295 L3.0269645,23.1080366 C2.07913318,23.6752135 0.850976404,23.366632 0.283799571,22.4188007 C0.0980803893,22.1084381 2.0190442e-15,21.7535219 0,21.3918362 L0,3.58469444 L0.00548573643,3.43543209 L0.00548573643,3.43543209 L0,3.5715689 C3.0881846e-16,2.4669994 0.8954305,1.5715689 2,1.5715689 C2.36889529,1.5715689 2.73060353,1.67359571 3.04512412,1.86636639 L15,9.19354839 L26.9548759,1.86636639 C27.2693965,1.67359571 27.6311047,1.5715689 28,1.5715689 C29.1045695,1.5715689 30,2.4669994 30,3.5715689 L30,3.5715689 Z'
+                />
+                <polygon
+                  id='Rectangle'
+                  opacity='0.077704'
+                  fill='#000'
+                  points='0 8.58870968 7.25806452 12.7505183 7.25806452 16.8305646'
+                />
+                <polygon
+                  id='Rectangle'
+                  opacity='0.077704'
+                  fill='#000'
+                  points='0 8.58870968 7.25806452 12.6445567 7.25806452 15.1370162'
+                />
+                <polygon
+                  id='Rectangle'
+                  opacity='0.077704'
+                  fill='#000'
+                  points='22.7419355 8.58870968 30 12.7417372 30 16.9537453'
+                  transform='translate(26.370968, 12.771227) scale(-1, 1) translate(-26.370968, -12.771227) '
+                />
+                <polygon
+                  id='Rectangle'
+                  opacity='0.077704'
+                  fill='#000'
+                  points='22.7419355 8.58870968 30 12.6409734 30 15.2601969'
+                  transform='translate(26.370968, 11.924453) scale(-1, 1) translate(-26.370968, -11.924453) '
+                />
+                <path
+                  id='Rectangle'
+                  fillOpacity='0.15'
+                  fill='#FFF'
+                  d='M3.04512412,1.86636639 L15,9.19354839 L15,9.19354839 L15,17.1774194 L0,8.58649679 L0,3.5715689 C3.0881846e-16,2.4669994 0.8954305,1.5715689 2,1.5715689 C2.36889529,1.5715689 2.73060353,1.67359571 3.04512412,1.86636639 Z'
+                />
+                <path
+                  id='Rectangle'
+                  fillOpacity='0.35'
+                  fill='#FFF'
+                  transform='translate(22.500000, 8.588710) scale(-1, 1) translate(-22.500000, -8.588710) '
+                  d='M18.0451241,1.86636639 L30,9.19354839 L30,9.19354839 L30,17.1774194 L15,8.58649679 L15,3.5715689 C15,2.4669994 15.8954305,1.5715689 17,1.5715689 C17.3688953,1.5715689 17.7306035,1.67359571 18.0451241,1.86636639 Z'
+                />
               </g>
-            </svg>
+            </g>
+          </g>
+        </svg>
 
-            <h6 style={{ marginLeft: 7, textTransform: 'uppercase', marginBottom: 0, color: 'rgba(58, 53, 65, 0.87)' }}>
-              Company Active
-            </h6>
-          </div>
-          <div style={{ marginBottom: 13 }}>
-            <h5 style={{ color: 'rgba(58, 53, 65, 0.87)' }}>Welcome to Company Active! 👋🏻</h5>
-            <p style={{ color: 'rgba(58, 53, 65, 0.68)' }}>Let us know how we can help you!</p>
-          </div>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={12}>
-              <FormControl fullWidth>
-                <Controller
-                  control={control}
-                  name='ticketCategory'
-                  render={({ field }) => (
-                    <>
-                      {/* <InputLabel>{item.placeHolder}</InputLabel> */}
-                      <Creatable
-                        {...field}
-                        onChange={handleSelectChange}
-                        options={handleGetOptions()}
-                        value={valueCategory}
-                        isSearchable
-                        isClearable
-                        className='z-2'
-                        styles={categoryStyles}
-                      />
-                    </>
-                  )}
-                />
-                <Typography style={{ color: 'red', marginTop: 0, marginBottom: 10 }}>
-                  {errors.ticketCategory?.message}
-                </Typography>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={12}>
-              <FormControl fullWidth>
-                <Controller
-                  control={control}
-                  name='content'
-                  render={({ field: { onChange, value } }) => (
-                    <StyledTextarea
-                      sx={{ maxHeight: 200 }}
-                      fullWidth
-                      required
-                      multiline
-                      minRows={6}
-                      placeholder='Message'
-                      onChange={onChange}
-                      value={value}
-                      type='input'
-                    />
-                  )}
-                />
-                <Typography style={{ color: 'red', marginTop: 0, marginBottom: 10 }}>
-                  {errors.content?.message}
-                </Typography>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-        <Divider sx={{ margin: 0 }} />
-        <CardActions style={{ justifyContent: 'center' }}>
-          <Button size='large' type='submit' fullWidth variant='contained' onClick={handleSubmit(onSubmit)}>
-            Submit
-          </Button>
-        </CardActions>
-      </FormControl>
-      <div style={{ margin: 'auto' }}>
-        {inputCustomer.map(input => {
-          return (
-            <Grid key={input.field}>
-              <InputLabel style={{ marginBottom: 10 }}>{input.inputLabel}</InputLabel>
-              <TextField
-                variant='standard'
-                placeholder={input.label}
-                name={input.field}
-                required
-                fullWidth
-                disabled
-                value={dataCustomer[input.field]}
-                style={{ marginBottom: 20, borderBottom: '2px solid #9155FD' }}
-                InputProps={{
-                  startAdornment: <InputAdornment position='start'>{input.icon}</InputAdornment>
-                }}
-              />
-            </Grid>
-          )
-        })}
+        <h6 style={{ marginLeft: 7, textTransform: 'uppercase', marginBottom: 0, color: 'rgba(58, 53, 65, 0.87)' }}>
+          Company Active
+        </h6>
       </div>
+      <div style={{ marginBottom: 13, textAlign: 'center' }}>
+        <h5 style={{ color: 'rgba(58, 53, 65, 0.87)' }}>Welcome to Company Active! 👋🏻</h5>
+        <p style={{ color: 'rgba(58, 53, 65, 0.68)' }}>Let us know how we can help you!</p>
+      </div>
+      <div>
+        <CustomTable
+          data={dataTicket || []}
+          parseFunction={parseData}
+          columns={columns}
+          isShowPaging
+          classNameTable='tblCampaignReport'
+        />
+      </div>
+      <Divider sx={{ margin: 0 }} />
+      <CardActions style={{ justifyContent: 'center' }}>
+        <Button size='large' type='submit' fullWidth variant='outlined'>
+          Reopen Ticket
+        </Button>
+        <Button size='large' type='submit' fullWidth variant='contained' onClick={() => handleCloseTicket()}>
+          Close Ticket
+        </Button>
+      </CardActions>
+      {/* <div>
+        <CustomTable
+          data={[]}
+          parseFunction={parseData}
+          columns={columns}
+          isShowPaging
+          classNameTable='tblCampaignReport'
+        />
+      </div> */}
       <Loading isLoading={isLoading} />
     </div>
   )
