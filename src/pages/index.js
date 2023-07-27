@@ -30,12 +30,17 @@ import Loading from 'src/components/Loading'
 import { AccountCircle, EmailOutline, MapMarkerOutline, PhoneInTalk } from 'mdi-material-ui'
 import { useSnackbar } from 'notistack'
 import CustomTable from 'src/components/TableCommon'
+import moment from 'moment'
 
 const validationSchema = Yup.object().shape({
   content: Yup.string().required('Message is required')
 })
 
 const columns = [
+  {
+    field: 'index',
+    name: 'STT'
+  },
   {
     field: 'content',
     name: 'Content Ticket'
@@ -51,6 +56,10 @@ const columns = [
   {
     field: 'name',
     name: 'Handle Staff'
+  },
+  {
+    field: 'email',
+    name: 'Handle Staff Email'
   },
   {
     field: 'status',
@@ -157,7 +166,7 @@ function CreateTicket() {
   const [isLoading, setIsLoading] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const [dataTicket, setDataTicket] = useState([])
-  const [modalReopen, setModalReopen] = useState([])
+  const [modalReopen, setModalReopen] = useState(false)
 
   const handleShowSnackbar = (message, variant = 'success') => enqueueSnackbar(message, { variant })
 
@@ -198,14 +207,13 @@ function CreateTicket() {
 
       if (res && res.status === 200) {
         setIsLoading(false)
-        setDataTicket(res.data)
+        setDataTicket([res.data])
       }
     } catch (error) {
       setIsLoading(false)
       console.error('error: ', error)
     }
   }
-
   const handleOpenModalReopen = () => setModalReopen(true)
 
   const handleReopenTicket = async data => {
@@ -339,6 +347,17 @@ function CreateTicket() {
           </div>
         )
       }
+    }
+    if (field === 'name') {
+      return <Typography>{item?.resolver?.fullName}</Typography>
+    }
+    if (field === 'email') {
+      return <Typography>{item?.resolver?.email}</Typography>
+    }
+    if (field === 'createdAt') {
+      const formatDate = moment(item?.createdAt).format('YYYY/MM/DD')
+
+      return <div>{formatDate}</div>
     }
 
     return item[field]
