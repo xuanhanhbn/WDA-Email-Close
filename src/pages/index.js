@@ -1,12 +1,20 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import Backdrop from '@mui/material/Backdrop'
 
 import Select from 'react-select'
 import CardActions from '@mui/material/CardActions'
+import { Input } from 'antd'
+
 import { FormControl, InputAdornment, InputLabel, TextField, TextareaAutosize, Typography } from '@mui/material'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
+import Modal from '@mui/material/Modal'
+import Fade from '@mui/material/Fade'
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
+import Box from '@mui/material/Box'
 
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
@@ -24,32 +32,52 @@ import { useSnackbar } from 'notistack'
 import CustomTable from 'src/components/TableCommon'
 
 const validationSchema = Yup.object().shape({
-  ticketCategory: Yup.string().required('Category is required'),
   content: Yup.string().required('Message is required')
 })
 
 const columns = [
   {
     field: 'content',
-    lable: 'Content Ticket'
+    name: 'Content Ticket'
   },
   {
     field: 'createdAt',
-    lable: 'Created At'
+    name: 'Created At'
   },
   {
     field: 'ticketCategory',
-    lable: 'Ticket Category'
+    name: 'Ticket Category'
   },
   {
     field: 'name',
-    lable: 'Handle Staff'
+    name: 'Handle Staff'
   },
   {
     field: 'status',
-    lable: 'Status'
+    name: 'Status'
   }
 ]
+
+const style = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  borderRadius: 1,
+  boxShadow: 24
+}
+
+const modalStyles = {
+  inputFields: {
+    marginTop: '20px',
+    marginBottom: '15px',
+    '.MuiFormControl-root': {
+      marginBottom: '20px'
+    }
+  }
+}
 
 const grey = {
   50: '#f6f8fa',
@@ -129,11 +157,13 @@ function CreateTicket() {
   const [isLoading, setIsLoading] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const [dataTicket, setDataTicket] = useState([])
+  const [modalReopen, setModalReopen] = useState([])
 
   const handleShowSnackbar = (message, variant = 'success') => enqueueSnackbar(message, { variant })
 
   const test = useRef()
   const valiToken = useRef()
+  const { TextArea } = Input
 
   const onSubmit = data => {
     console.log('click: ')
@@ -142,8 +172,8 @@ function CreateTicket() {
 
   useEffect(() => {
     setTimeout(() => {
-      handleGetDataCustomer()
-    }, 2000)
+      // handleGetDataTicket()
+    }, 1000)
   }, [])
 
   useEffect(() => {
@@ -153,7 +183,7 @@ function CreateTicket() {
     }
   }, [router.query])
 
-  const handleGetDataCustomer = async () => {
+  const handleGetDataTicket = async () => {
     try {
       setIsLoading(true)
 
@@ -163,15 +193,46 @@ function CreateTicket() {
             'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJoYW5obnhAZ21haWwuY29tIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvc2lkIjoiNjE1OWE1ODAtNmUxNC00ZTFmLTA3MTktMDhkYjhjMWI3MjRiIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE2OTEwNTQzMDAsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzA4NDEsaHR0cDovL2xvY2FsaG9zdDo0NDMzNSxodHRwczovL2xvY2FsaG9zdDo3Mjc1O2h0dHA6Ly9sb2NhbGhvc3Q6NTEyMiIsImF1ZCI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzA4NDEsaHR0cDovL2xvY2FsaG9zdDo0NDMzNSxodHRwczovL2xvY2FsaG9zdDo3Mjc1O2h0dHA6Ly9sb2NhbGhvc3Q6NTEyMiJ9.LcDs_RZxAuzw3fVYj2gxb7KvIOhz7ASIurp1LhMsKPo'
         }
       }
-      const res = await axios.get(`https://wdabckd.azurewebsites.net/api/Customer/${test.current}`, config)
+
+      const res = await axios.get(`https://wdabckd.azurewebsites.net/api/CustomerTicket/${test.current}`, config)
 
       if (res && res.status === 200) {
         setIsLoading(false)
-        setDataCustomer(res.data)
+        setDataTicket(res.data)
       }
     } catch (error) {
       setIsLoading(false)
       console.error('error: ', error)
+    }
+  }
+
+  const handleOpenModalReopen = () => setModalReopen(true)
+
+  const handleReopenTicket = async data => {
+    try {
+      setIsLoading(true)
+
+      const newDataRequest = {
+        ticketId: test.current,
+        validationToken: valiToken.current,
+        content: data?.content
+      }
+      console.log('newDataRequest: ', newDataRequest)
+
+      const res = await axios.put(
+        `https://wdabckd.azurewebsites.net/api/CustomerTicket/Reopen
+      `,
+        newDataRequest
+      )
+      if (res && res.status === 200) {
+        setIsLoading(false)
+
+        return handleShowSnackbar('Close Success')
+      }
+    } catch (error) {
+      setIsLoading(false)
+
+      return handleShowSnackbar('There was an error. Please try again.', 'error')
     }
   }
 
@@ -191,9 +252,8 @@ function CreateTicket() {
       )
       if (res && res.status === 200) {
         setIsLoading(false)
-        setDataTicket(res.data)
 
-        return handleShowSnackbar('Create Ticket Success')
+        return handleShowSnackbar('Close Success')
       }
     } catch (error) {
       setIsLoading(false)
@@ -375,7 +435,7 @@ function CreateTicket() {
       </div>
       <Divider sx={{ margin: 0 }} />
       <CardActions style={{ justifyContent: 'center' }}>
-        <Button size='large' type='submit' fullWidth variant='outlined'>
+        <Button size='large' type='submit' fullWidth variant='outlined' onClick={() => handleOpenModalReopen()}>
           Reopen Ticket
         </Button>
         <Button size='large' type='submit' fullWidth variant='contained' onClick={() => handleCloseTicket()}>
@@ -391,6 +451,80 @@ function CreateTicket() {
           classNameTable='tblCampaignReport'
         />
       </div> */}
+      {modalReopen && (
+        <div>
+          <Modal
+            aria-labelledby='transition-modal-title'
+            aria-describedby='transition-modal-description'
+            open={modalReopen}
+            onClose={() => setModalReopen(false)}
+            closeAfterTransition
+            slots={{ backdrop: Backdrop }}
+            slotProps={{
+              backdrop: {
+                timeout: 500
+              }
+            }}
+          >
+            <Fade in={modalReopen}>
+              <Box sx={style}>
+                <Card fullWidth>
+                  <CardHeader title='Reopen' titleTypographyProps={{ variant: 'h6' }} />
+                  <Divider sx={{ margin: 0 }} />
+                  <form>
+                    <FormControl style={{ width: '100%' }}>
+                      <CardContent>
+                        <Grid container spacing={5}>
+                          <Grid item xs={12}>
+                            <Box sx={modalStyles.inputFields}>
+                              <Grid>
+                                <Controller
+                                  control={control}
+                                  render={({ field: { onChange, value } }) => {
+                                    return (
+                                      <TextArea
+                                        name='content'
+                                        value={value}
+                                        placeholder='Reply...'
+                                        onChange={onChange}
+                                        rows={6}
+                                        style={{ marginTop: 30, borderRadius: 6 }}
+                                      />
+                                    )
+                                  }}
+                                  name='content'
+                                />
+                                <Typography style={{ color: 'red', marginTop: 0, marginBottom: 10 }}>
+                                  {errors?.content?.message}
+                                </Typography>
+                              </Grid>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                      <Divider sx={{ margin: 0 }} />
+                      <CardActions style={{ justifyContent: 'flex-end' }}>
+                        <Button size='large' color='secondary' variant='outlined' onClick={() => setModalReopen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          size='large'
+                          type='submit'
+                          sx={{ mr: 2 }}
+                          variant='contained'
+                          onClick={handleSubmit(handleReopenTicket)}
+                        >
+                          Submit
+                        </Button>
+                      </CardActions>
+                    </FormControl>
+                  </form>
+                </Card>
+              </Box>
+            </Fade>
+          </Modal>
+        </div>
+      )}
       <Loading isLoading={isLoading} />
     </div>
   )
