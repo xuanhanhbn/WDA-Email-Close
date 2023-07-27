@@ -225,7 +225,6 @@ function CreateTicket() {
         validationToken: valiToken.current,
         content: data?.content
       }
-      console.log('newDataRequest: ', newDataRequest)
 
       const res = await axios.put(
         `https://wdabckd.azurewebsites.net/api/CustomerTicket/Reopen
@@ -234,8 +233,9 @@ function CreateTicket() {
       )
       if (res && res.status === 200) {
         setIsLoading(false)
+        setModalReopen(false)
 
-        return handleShowSnackbar('Close Success')
+        return handleShowSnackbar('Reopen Success')
       }
     } catch (error) {
       setIsLoading(false)
